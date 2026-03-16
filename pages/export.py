@@ -316,17 +316,25 @@ def render_step2_preview():
 # 6. ÉTAPE 3 : GÉNÉRATION PDF
 # -----------------------------------------------------------------------------
 def render_step3_generation():
-    """Affiche l'étape 3 : Génération et téléchargement du PDF"""
+def render_step3_generation():
+    """Affiche l'étape 3 : Génération et téléchargement HTML"""
     st.markdown("### Étape 3 : Rapport Généré")
     
-    if not st.session_state.export_pdf_path:
-        st.warning("⚠️ Aucun PDF généré. Veuillez retourner à l'étape 2.")
-        return
+    data = get_export_data()
     
-    pdf_path = Path(st.session_state.export_pdf_path)
+    # Générer le HTML
+    from utils.html_export import generate_report_html, get_download_link
     
-    if pdf_path.exists():
-        st.success("✅ Rapport PDF généré avec succès !")
+    html_content = generate_report_html(data)
+    
+    st.success("✅ Rapport généré avec succès !")
+    
+    # Afficher le lien de téléchargement
+    st.markdown(get_download_link(html_content), unsafe_allow_html=True)
+    
+    # Option : Afficher un aperçu
+    if st.checkbox("👁️ Voir l'aperçu HTML"):
+        st.components.v1.html(html_content, height=800, scrolling=True)
         
         # ---------------------------------------------------------------------
         # INFORMATIONS DU FICHIER
