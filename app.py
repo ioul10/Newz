@@ -206,8 +206,8 @@ def render_sidebar():
     st.sidebar.markdown("---")
     st.sidebar.markdown(f"""
     <div style="text-align: center; font-size: 11px; color: #666;">
-        <p>© 2025 CDG Capital</p>
-        <p>Usage interne uniquement</p>
+        <p>© CDG Capital</p>
+        <p>Réalisé par OULMADANI</p>
     </div>
     """, unsafe_allow_html=True)
 
