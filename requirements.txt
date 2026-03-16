@@ -1,13 +1,7 @@
-# NEWZ - Market Data Platform
-# Version compatible Streamlit Cloud (SANS lxml)
-
-streamlit==1.31.0
-pandas==2.1.4
-numpy==1.26.3
-plotly==5.18.0
-requests==2.31.0
-beautifulsoup4==4.12.3
-reportlab==4.0.9
-Pillow==10.2.0
-python-dateutil==2.8.2
-pytz==2024.1
+streamlit
+pandas
+numpy
+plotly
+requests
+beautifulsoup4
+Pillow
