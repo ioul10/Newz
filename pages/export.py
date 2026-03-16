@@ -197,17 +197,35 @@ def render_step2_preview():
 # 6. GÉNÉRATEUR HTML PROFESSIONNEL
 # -----------------------------------------------------------------------------
 def generate_report_html(data):
-    """Génère un rapport HTML professionnel"""
+    """Génère un rapport HTML avec graphiques Plotly"""
+    
+    from utils.charts import (
+        generate_masi_chart, generate_monia_chart, generate_fx_chart,
+        generate_inflation_gauge, generate_bdt_chart, generate_reserves_chart,
+        convert_fig_to_html
+    )
+    
+    # Générer tous les graphiques
+    masi_html = convert_fig_to_html(generate_masi_chart())
+    monia_html = convert_fig_to_html(generate_monia_chart())
+    eur_mad_html = convert_fig_to_html(generate_fx_chart('EUR/MAD'))
+    usd_mad_html = convert_fig_to_html(generate_fx_chart('USD/MAD'))
+    inflation_html = convert_fig_to_html(generate_inflation_gauge(data['inflation']['value'], data['inflation']['target']))
+    bdt_html = convert_fig_to_html(generate_bdt_chart())
+    reserves_html = convert_fig_to_html(generate_reserves_chart())
     
     sections = st.session_state.export_selected_sections
     
-    # Construction dynamique des sections HTML
+    # Construction des sections
     sections_html = ""
     
     if 'bdc_statut' in sections:
         sections_html += f"""
         <div class="section">
             <h2>📈 Indices Boursiers</h2>
+            <div class="chart-grid">
+                <div class="chart-container">{masi_html}</div>
+            </div>
             <table>
                 <thead><tr><th>Indice</th><th>Valeur</th><th>Variation</th><th>Volume</th></tr></thead>
                 <tbody>
@@ -226,6 +244,14 @@ def generate_report_html(data):
         sections_html += f"""
         <div class="section">
             <h2>🏦 Taux & Devises</h2>
+            <div class="chart-grid-2">
+                <div class="chart-container">{monia_html}</div>
+                <div class="chart-container">{bdt_html}</div>
+            </div>
+            <div class="chart-grid-2">
+                <div class="chart-container">{eur_mad_html}</div>
+                <div class="chart-container">{usd_mad_html}</div>
+            </div>
             <table>
                 <thead><tr><th>Indicateur</th><th>Valeur</th><th>Variation</th></tr></thead>
                 <tbody>
@@ -241,31 +267,12 @@ def generate_report_html(data):
         sections_html += f"""
         <div class="section">
             <h2>💹 Inflation</h2>
+            <div class="chart-grid">
+                <div class="chart-container">{inflation_html}</div>
+            </div>
             <p><b>Valeur actuelle :</b> {data['inflation']['value']:.2f}%</p>
             <p><b>Cible BAM :</b> {data['inflation']['target']}%</p>
             <p><b>Statut :</b> {'✅ Dans la cible' if abs(data['inflation']['value'] - data['inflation']['target']) <= 0.5 else '⚠️ Hors cible'}</p>
-        </div>
-        """
-    
-    if 'statistics' in sections:
-        sections_html += """
-        <div class="section">
-            <h2>📊 Statistiques Clés</h2>
-            <p>• Corrélation moyenne MSI20 : 0.65</p>
-            <p>• Volatilité MASI (30j) : 1.2%</p>
-            <p>• Beta moyen des valeurs : 1.05</p>
-        </div>
-        """
-    
-    if 'news' in sections:
-        sections_html += """
-        <div class="section">
-            <h2>📰 Actualités Marquantes</h2>
-            <ul>
-                <li>Bank Al-Maghrib maintient son taux directeur à 3%</li>
-                <li>Le MASI franchit la barre des 12 500 points</li>
-                <li>L'inflation au Maroc ralentit à 0,8% en glissement annuel</li>
-            </ul>
         </div>
         """
     
@@ -279,74 +286,346 @@ def generate_report_html(data):
     <head>
         <meta charset="UTF-8">
         <title>Newz Report - {data['report_date']}</title>
+        <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
         <style>
             body {{ font-family: Arial, sans-serif; margin: 40px; line-height: 1.6; color: #333; }}
             .header {{ background: linear-gradient(135deg, #005696 0%, #003d6b 100%); color: white; padding: 30px; text-align: center; border-radius: 10px; margin-bottom: 30px; }}
             .header h1 {{ margin: 0; font-size: 32px; }}
-            .header p {{ margin: 10px 0 0 0; opacity: 0.9; }}
-            .kpi-container {{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 30px; }}
-            .kpi-box {{ background: #f8f9fa; border-left: 5px solid #005696; padding: 20px; border-radius: 8px; text-align: center; }}
-            .kpi-box h3 {{ margin: 0 0 10px 0; color: #005696; font-size: 14px; text-transform: uppercase; }}
-            .kpi-box .value {{ font-size: 28px; font-weight: bold; color: #333; }}
-            .positive {{ color: #28a745; }} .negative {{ color: #dc3545; }}
-            .section {{ background: white; border: 1px solid #e0e0e0; border-radius: 8px; padding: 25px; margin-bottom: 25px; }}
-            .section h2 {{ color: #005696; border-bottom: 3px solid #005696; padding-bottom: 10px; margin-top: 0; }}
-            table {{ width: 100%; border-collapse: collapse; margin-top: 15px; }}
-            th, td {{ padding: 12px 15px; text-align: left; border-bottom: 1px solid #ddd; }}
-            th {{ background: #005696; color: white; font-weight: bold; }}
-            tr:nth-child(even) {{ background: #f8f9fa; }}
-            .footer {{ margin-top: 50px; padding: 25px; background: #f8f9fa; border-radius: 8px; text-align: center; font-size: 12px; color: #666; border-top: 4px solid #005696; }}
-            .stamp {{ margin-top: 30px; display: inline-block; border: 4px solid #dc3545; color: #dc3545; padding: 15px 40px; font-weight: bold; font-size: 20px; transform: rotate(-3deg); opacity: 0.8; }}
-            .movers-grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }}
-            .movers-grid h3 {{ color: #005696; border-bottom: 2px solid #005696; padding-bottom: 8px; }}
-            .movers-grid ul {{ list-style: none; padding: 0; }}
-            .movers-grid li {{ padding: 8px 0; border-bottom: 1px solid #eee; }}
-            @media print {{ body {{ margin: 0; }} .no-print {{ display: none; }} }}
-        </style>
-    </head>
-    <body>
-        <div class="no-print" style="background: #fff3cd; padding: 15px; border-radius: 8px; margin-bottom: 20px; text-align: center;">
-            <strong>💡 Astuce :</strong> Appuyez sur <kbd>Ctrl+P</kbd> (ou Cmd+P) pour imprimer cette page en PDF
-        </div>
-        
-        <div class="header">
-            <h1>🏦 CDG CAPITAL</h1>
-            <p><b>Newz — Market Data Weekly</b></p>
-            <p>{data['report_week']}</p>
-            <p style="font-size: 12px; margin-top: 10px;">Généré le {datetime.now().strftime('%d/%m/%Y à %H:%M:%S')}</p>
-        </div>
-        
-        <div class="kpi-container">
-            <div class="kpi-box"><h3>📊 MASI</h3><div class="value">{data['masi']['value']:,.0f}</div><div class="change {'positive' if data['masi']['change'] > 0 else 'negative'}">{data['masi']['change']:+.2f}%</div></div>
-            <div class="kpi-box"><h3>💶 EUR/MAD</h3><div class="value">{data['eur_mad']['value']:.4f}</div><div class="change {'positive' if data['eur_mad']['change'] > 0 else 'negative'}">{data['eur_mad']['change']:+.2f}%</div></div>
-            <div class="kpi-box"><h3>💹 Inflation</h3><div class="value">{data['inflation']['value']:.2f}%</div><div style="font-size: 12px; color: #666; margin-top: 5px;">Cible: {data['inflation']['target']}%</div></div>
-        </div>
-        
-        {sections_html}
-        
-        <div class="section">
-            <h2>📊 Top Movers</h2>
-            <div class="movers-grid">
-                <div><h3 style="color:#28a745">🟢 Top Gainers</h3><ul>{gainers_html}</ul></div>
-                <div><h3 style="color:#dc3545">🔴 Top Losers</h3><ul>{losers_html}</ul></div>
-            </div>
-        </div>
-        
-        <div class="footer">
-            <p><b style="color: #005696; font-size: 14px;">CDG Capital — Market Data Team</b></p>
-            <p>Newz v1.0 | Usage interne uniquement | Document confidentiel</p>
-            <p style="margin-top: 15px; font-size: 11px;">Sources : Bourse de Casablanca | Bank Al-Maghrib | HCP</p>
-            <div class="stamp">ADMIN<br/>CONFIDENTIEL</div>
-        </div>
-        
-        <div class="no-print" style="margin-top: 30px; text-align: center; padding: 20px; background: #e8f5e9; border-radius: 8px;">
-            <p style="margin: 0 0 15px 0; font-size: 16px; font-weight: bold; color: #2e7d32;">📄 Pour sauvegarder en PDF :</p>
-            <p style="margin: 0; color: #666;">Appuyez sur <kbd style="background: white; padding: 5px 10px; border-radius: 4px; border: 1px solid #ccc;">Ctrl+P</kbd> puis sélectionnez "Enregistrer au format PDF"</p>
-        </div>
-    </body>
-    </html>
-    """
-    return html
+            .kpi-container {{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: Parfait, Ilyas ! Je vois le modèle de rapport professionnel que vous voulez. Je vais créer un **générateur de graphiques avancés** pour intégrer des visualisations similaires dans votre rapport HTML.
+
+---
+
+## 📊 CRÉATION DU MODULE DE GRAPHIQUES
+
+Créez le fichier `utils/report_charts.py` :
+
+```python
+# =============================================================================
+# NEWZ - Générateur de Graphiques pour Rapports
+# Fichier : utils/report_charts.py
+# =============================================================================
+
+import plotly.graph_objects as go
+import plotly.express as px
+import pandas as pd
+import numpy as np
+from datetime import datetime, timedelta
+import base64
+from io import BytesIO
+
+# -----------------------------------------------------------------------------
+# 1. FONCTIONS DE GÉNÉRATION DE DONNÉES
+# -----------------------------------------------------------------------------
+def generate_bdt_data():
+    """Génère les données pour la courbe BDT"""
+    return {
+        '1Y': 2.43,
+        '5Y': 2.87,
+        '10Y': 3.25,
+        '15Y': 3.55
+    }
+
+def generate_monia_history(days=90):
+    """Génère l'historique MONIA"""
+    dates = pd.date_range(end=datetime.now(), periods=days, freq='B')
+    base_rate = 3.00
+    changes = np.random.normal(0, 0.02, days)
+    rates = base_rate + np.cumsum(changes)
+    rates = np.clip(rates, 2.0, 4.5)
+    return pd.DataFrame({'date': dates, 'rate': rates})
+
+def generate_masi_history(days=90):
+    """Génère l'historique MASI"""
+    dates = pd.date_range(end=datetime.now(), periods=days, freq='B')
+    base_value = 12000
+    returns = np.random.normal(0.0005, 0.015, days)
+    values = base_value * np.cumprod(1 + returns)
+    return pd.DataFrame({'date': dates, 'value': values})
+
+def generate_fx_history(days=90, base_rate=10.75):
+    """Génère l'historique des taux de change"""
+    dates = pd.date_range(end=datetime.now(), periods=days, freq='B')
+    changes = np.random.normal(0, 0.02, days)
+    rates = base_rate + np.cumsum(changes)
+    return pd.DataFrame({'date': dates, 'rate': rates})
+
+def generate_reserves_history(days=90):
+    """Génère l'historique des réserves obligatoires"""
+    dates = pd.date_range(end=datetime.now(), periods=days, freq='B')
+    base_reserves = 11500
+    changes = np.random.normal(0, 150, days)
+    reserves = base_reserves + np.cumsum(changes)
+    return pd.DataFrame({'date': dates, 'reserves': reserves})
+
+# -----------------------------------------------------------------------------
+# 2. GRAPHIQUES INDIVIDUELS
+# -----------------------------------------------------------------------------
+def create_bdt_chart():
+    """Crée le graphique BDT (1Y/5Y)"""
+    data = generate_bdt_data()
+    
+    fig = go.Figure(data=[
+        go.Bar(
+            x=['1Y', '5Y', '10Y', '15Y'],
+            y=[data['1Y'], data['5Y'], data['10Y'], data['15Y']],
+            marker_color=['#005696', '#003d6b', '#00a8e8', '#0077b6'],
+            text=[f"{v:.2f}%" for v in data.values()],
+            textposition='auto'
+        )
+    ])
+    
+    fig.update_layout(
+        height=300,
+        margin=dict(l=40, r=40, t=40, b=40),
+        xaxis_title='Maturité',
+        yaxis_title='Taux (%)',
+        plot_bgcolor='white',
+        paper_bgcolor='white',
+        showlegend=False
+    )
+    
+    return fig
+
+def create_monia_chart():
+    """Crée le graphique MONIA"""
+    data = generate_monia_history(90)
+    
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(
+        x=data['date'],
+        y=data['rate'],
+        mode='lines',
+        line=dict(color='#005696', width=2),
+        fill='tozeroy',
+        fillcolor='rgba(0, 86, 150, 0.1)'
+    ))
+    
+    fig.update_layout(
+        height=300,
+        margin=dict(l=40, r=40, t=40, b=40),
+        xaxis_title='Date',
+        yaxis_title='Taux (%)',
+        plot_bgcolor='white',
+        paper_bgcolor='white',
+        showlegend=False
+    )
+    
+    return fig
+
+def create_masi_chart():
+    """Crée le graphique MASI"""
+    data = generate_masi_history(90)
+    current = data['value'].iloc[-1]
+    change = ((current - data['value'].iloc[-2]) / data['value'].iloc[-2]) * 100
+    color = '#28a745' if change >= 0 else '#dc3545'
+    
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(
+        x=data['date'],
+        y=data['value'],
+        mode='lines',
+        line=dict(color=color, width=2),
+        fill='tozeroy',
+        fillcolor=f'rgba(40, 167, 69, 0.1)' if change >= 0 else f'rgba(220, 53, 69, 0.1)'
+    ))
+    
+    fig.update_layout(
+        height=300,
+        margin=dict(l=40, r=40, t=40, b=40),
+        xaxis_title='Date',
+        yaxis_title='Indice MASI',
+        plot_bgcolor='white',
+        paper_bgcolor='white',
+        showlegend=False
+    )
+    
+    return fig
+
+def create_eur_mad_chart():
+    """Crée le graphique EUR/MAD"""
+    data = generate_fx_history(90, 10.75)
+    
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(
+        x=data['date'],
+        y=data['rate'],
+        mode='lines',
+        line=dict(color='#00a8e8', width=2),
+        fill='tozeroy',
+        fillcolor='rgba(0, 168, 232, 0.1)'
+    ))
+    
+    fig.update_layout(
+        height=300,
+        margin=dict(l=40, r=40, t=40, b=40),
+        xaxis_title='Date',
+        yaxis_title='EUR/MAD',
+        plot_bgcolor='white',
+        paper_bgcolor='white',
+        showlegend=False
+    )
+    
+    return fig
+
+def create_inflation_gauge(value=-0.8, target_min=2, target_max=3):
+    """Crée la jauge d'inflation"""
+    # Déterminer la couleur selon la position
+    if target_min - 0.5 <= value <= target_max + 0.5:
+        color = '#28a745'  # Vert - dans la cible
+        status = "Dans la cible"
+    elif value < target_min:
+        color = '#ffc107'  # Jaune - en dessous
+        status = "En-dessous"
+    else:
+        color = '#dc3545'  # Rouge - au-dessus
+        status = "Au-dessus"
+    
+    fig = go.Figure(go.Indicator(
+        mode="gauge+number",
+        value=value,
+        domain={'x': [0, 1], 'y': [0, 1]},
+        title={'text': f"Inflation (%)<br><span style='font-size: 12px'>{status}</span>", 
+               'font': {'size': 14}},
+        number={'font': {'size': 24}},
+        gauge={
+            'axis': {'range': [-2, 8], 'tickwidth': 1},
+            'bar': {'color': color},
+            'bgcolor': "white",
+            'borderwidth': 2,
+            'bordercolor': "#333",
+            'steps': [
+                {'range': [-2, 2], 'color': '#e8f5e9'},
+                {'range': [2, 3], 'color': '#c8e6c9'},
+                {'range': [3, 8], 'color': '#ffebee'}
+            ],
+            'threshold': {
+                'line': {'color': '#dc3545', 'width': 4},
+                'thickness': 0.75,
+                'value': target_max + 0.5
+            }
+        }
+    ))
+    
+    fig.update_layout(height=300, margin=dict(l=20, r=20, t=50, b=20))
+    return fig
+
+def create_reserves_chart():
+    """Crée le graphique des réserves obligatoires"""
+    data = generate_reserves_history(90)
+    
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(
+        x=data['date'],
+        y=data['reserves'],
+        mode='lines',
+        line=dict(color='#005696', width=2),
+        fill='tozeroy',
+        fillcolor='rgba(0, 86, 150, 0.1)'
+    ))
+    
+    fig.update_layout(
+        height=300,
+        margin=dict(l=40, r=40, t=40, b=40),
+        xaxis_title='Date',
+        yaxis_title='Réserves (MDH)',
+        plot_bgcolor='white',
+        paper_bgcolor='white',
+        showlegend=False
+    )
+    
+    return fig
+
+def create_usd_mad_chart():
+    """Crée le graphique USD/MAD"""
+    data = generate_fx_history(90, 9.85)
+    
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(
+        x=data['date'],
+        y=data['rate'],
+        mode='lines',
+        line=dict(color='#003d6b', width=2),
+        fill='tozeroy',
+        fillcolor='rgba(0, 61, 107, 0.1)'
+    ))
+    
+    fig.update_layout(
+        height=300,
+        margin=dict(l=40, r=40, t=40, b=40),
+        xaxis_title='Date',
+        yaxis_title='USD/MAD',
+        plot_bgcolor='white',
+        paper_bgcolor='white',
+        showlegend=False
+    )
+    
+    return fig
+
+def create_qualitative_gauge(score=2, max_score=4):
+    """Crée la jauge qualitative (sentiment/stress)"""
+    # Déterminer la couleur
+    if score <= 1:
+        color = '#28a745'
+        label = "Faible"
+    elif score <= 2:
+        color = '#ffc107'
+        label = "Modéré"
+    else:
+        color = '#dc3545'
+        label = "Élevé"
+    
+    fig = go.Figure(go.Indicator(
+        mode="gauge+number",
+        value=score,
+        domain={'x': [0, 1], 'y': [0, 1]},
+        title={'text': f"Sentiment & Stress<br><span style='font-size: 12px'>{label}</span>", 
+               'font': {'size': 14}},
+        number={'font': {'size': 32}},
+        gauge={
+            'axis': {'range': [0, max_score], 'tickwidth': 2},
+            'bar': {'color': color},
+            'bgcolor': "white",
+            'borderwidth': 2,
+            'bordercolor': "#333",
+            'steps': [
+                {'range': [0, 1], 'color': '#e8f5e9'},
+                {'range': [1, 2], 'color': '#fff9c4'},
+                {'range': [2, 4], 'color': '#ffebee'}
+            ]
+        }
+    ))
+    
+    fig.update_layout(height=300, margin=dict(l=20, r=20, t=50, b=20))
+    return fig
+
+# -----------------------------------------------------------------------------
+# 3. CONVERSION GRAPHIQUES → IMAGES BASE64
+# -----------------------------------------------------------------------------
+def fig_to_base64(fig, format='png', scale=2):
+    """Convertit un graphique Plotly en image Base64"""
+    img_bytes = BytesIO()
+    fig.write_image(img_bytes, format=format, scale=scale)
+    img_bytes.seek(0)
+    return base64.b64encode(img_bytes.read()).decode()
+
+# -----------------------------------------------------------------------------
+# 4. FONCTION PRINCIPALE - TOUS LES GRAPHIQUES
+# -----------------------------------------------------------------------------
+def generate_all_charts():
+    """Génère tous les graphiques et les retourne en Base64"""
+    
+    charts = {
+        'bdt': fig_to_base64(create_bdt_chart()),
+        'monia': fig_to_base64(create_monias_chart()),
+        'masi': fig_to_base64(create_masi_chart()),
+        'eur_mad': fig_to_base64(create_eur_mad_chart()),
+        'inflation': fig_to_base64(create_inflation_gauge()),
+        'reserves': fig_to_base64(create_reserves_chart()),
+        'usd_mad': fig_to_base64(create_usd_mad_chart()),
+        'qualitative': fig_to_base64(create_qualitative_gauge())
+    }
+    
+    return charts
 
 def get_download_link(html_content, filename="newz_report.html"):
     """Génère un lien de téléchargement pour le fichier HTML"""
