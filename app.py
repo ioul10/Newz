@@ -254,8 +254,90 @@ def render_footer():
 
 # -----------------------------------------------------------------------------
 # 9. FONCTION PRINCIPALE
-# -----------------------------------------------------------------------------
+
 def main():
+    """Fonction principale de l'application"""
+    
+    # CSS Personnalisé pour améliorer le design
+    st.markdown("""
+    <style>
+        /* Import du CSS externe */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        
+        /* Appliquer la police */
+        * {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        /* Cacher le menu hamburger */
+        #MainMenu {visibility: hidden;}
+        
+        /* Header personnalisé */
+        .header-cdg {
+            background: linear-gradient(135deg, #005696 0%, #003d6b 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 15px;
+            margin: -10px -10px 30px -10px;
+            box-shadow: 0 4px 20px rgba(0, 86, 150, 0.3);
+        }
+        
+        /* Cartes KPI */
+        .kpi-card {
+            background: white;
+            border-left: 5px solid #005696;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+            transition: all 0.3s ease;
+        }
+        
+        .kpi-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+        }
+        
+        /* Boutons */
+        .stButton > button {
+            background: #005696;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 24px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .stButton > button:hover {
+            background: #003d6b;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 86, 150, 0.4);
+        }
+        
+        /* Sidebar */
+        [data-testid="stSidebar"] {
+            background: linear-gradient(180deg, #f8f9fa 0%, #e9ecef 100%);
+        }
+        
+        /* Métriques */
+        [data-testid="stMetricValue"] {
+            color: #005696;
+            font-size: 28px;
+            font-weight: 700;
+        }
+        
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .main > div {
+            animation: fadeIn 0.5s ease-out;
+        }
+    </style>
+    """, unsafe_allow_html=True) 
+    
     """Fonction principale de l'application"""
     
     # Chargement du CSS personnalisé
